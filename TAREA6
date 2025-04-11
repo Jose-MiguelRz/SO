@@ -1,0 +1,108 @@
+class Proceso:
+    def __init__(self, pid, tamano):
+        self.pid = pid
+        self.tamano = tamano
+
+class Memoria:
+    def __init__(self, tamano_total):
+        self.tamano_total = tamano_total
+        self.memoria = [None] * tamano_total
+        self.procesos = {}
+        self.next_pid = 1
+
+    def mostrar_estado(self):
+        en_uso = sum(1 for x in self.memoria if x is not None)
+        quedan = self.tamano_total - en_uso
+
+        print("\nMemoria:")
+        print("".join(['#' if x else '.' for x in self.memoria]))
+        print(f"En uso: {en_uso} MB")
+        print(f"Quedan: {quedan} MB")
+
+        print("Procesos:")
+        for pid, p in self.procesos.items():
+            print(f"Numero de proceso: {pid} - {p.tamano} MB")
+
+    def ingresar_proceso(self, tamano):
+        index = self.buscar_espacio(tamano)
+        if index is None:
+            print("No hay espacio seguido, desfragmentando...")
+            self.desfragmentar()
+            index = self.buscar_espacio(tamano)
+            if index is None:
+                print("Memoria insuficiente.")
+                return
+
+        pid = self.next_pid
+        self.next_pid += 1
+        for i in range(index, index + tamano):
+            self.memoria[i] = pid
+        self.procesos[pid] = Proceso(pid, tamano)
+        print(f"Proceso {pid} agregado.")
+
+    def eliminar_proceso(self, pid):
+        if pid not in self.procesos:
+            print("Ese proceso no existe.")
+            return
+        for i in range(self.tamano_total):
+            if self.memoria[i] == pid:
+                self.memoria[i] = None
+        del self.procesos[pid]
+        print(f"Proceso {pid} eliminado.")
+
+    def buscar_espacio(self, tamano):
+        libres = 0
+        inicio = 0
+        for i in range(self.tamano_total):
+            if self.memoria[i] is None:
+                if libres == 0:
+                    inicio = i
+                libres += 1
+                if libres == tamano:
+                    return inicio
+            else:
+                libres = 0
+        return None
+
+    def desfragmentar(self):
+        nueva_memoria = [None] * self.tamano_total
+        pos = 0
+        for pid in sorted(self.procesos):
+            tamano = self.procesos[pid].tamano
+            for _ in range(tamano):
+                nueva_memoria[pos] = pid
+                pos += 1
+        self.memoria = nueva_memoria
+
+def menu():
+    tamano = int(input("Tamano total de memoria (MB): "))
+    sistema = Memoria(tamano)
+
+    while True:
+        print("\n1. Agregar proceso")
+        print("2. Eliminar proceso")
+        print("3. Ver memoria")
+        print("4. Salir")
+        opcion = input("Opcion: ")
+
+        if opcion == "1":
+            tam = int(input("Tamano del proceso: "))
+            sistema.ingresar_proceso(tam)
+        elif opcion == "2":
+            if not sistema.procesos:
+                print("No hay procesos.")
+                continue
+            print("Procesos:")
+            for pid, p in sistema.procesos.items():
+                print(f"Numero de proceso: {pid} - {p.tamano} MB")
+            pid = int(input("Numero de proceso a eliminar: "))
+            sistema.eliminar_proceso(pid)
+        elif opcion == "3":
+            sistema.mostrar_estado()
+        elif opcion == "4":
+            break
+        else:
+            print("Opcion no valida.")
+
+if __name__ == "__main__":
+    menu()
